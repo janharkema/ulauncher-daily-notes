@@ -1,0 +1,40 @@
+{
+  "required_api_version": "^2.0.0",
+  "name": "Daily Notes",
+  "description": "Quick access to daily markdown journal - open or insert notes",
+  "developer_name": "Jan",
+  "icon": "images/icon.png",
+  "options": {
+    "query_debounce": 0.1
+  },
+  "preferences": [
+    {
+      "id": "keyword",
+      "type": "keyword",
+      "name": "Daily Notes",
+      "description": "Open daily notes or insert quick note",
+      "default_value": "dn"
+    },
+    {
+      "id": "notes_directory",
+      "type": "input",
+      "name": "Notes Directory",
+      "description": "Directory to store daily notes (default: ~/daily-notes)",
+      "default_value": "~/daily-notes"
+    },
+    {
+      "id": "date_format",
+      "type": "input",
+      "name": "Date Format",
+      "description": "Date header format (default: weekday, day month)",
+      "default_value": "%A, %d %b"
+    },
+    {
+      "id": "editor",
+      "type": "input",
+      "name": "Text Editor",
+      "description": "Command to open the notes file (e.g., gedit, code, xdg-open)",
+      "default_value": "xdg-open"
+    }
+  ]
+}
