@@ -42,6 +42,7 @@ class DailyNotesExtension(Extension):
         return f"## {today.strftime(date_format)}"
 
     def ensure_file_exists(self):
+        """Ensure the weekly file and directory exist, create if needed."""
         file_path = self.get_file_path()
         notes_dir = self.get_notes_directory()
 
@@ -52,9 +53,13 @@ class DailyNotesExtension(Extension):
         if not os.path.exists(file_path):
             with open(file_path, "w") as f:
                 f.write(self.get_date_header() + "\n\n")
-            return file_path
 
-        # Check if we need to prepend today's date header
+        return file_path
+
+    def ensure_date_header(self):
+        """Prepend today's date header if it doesn't exist."""
+        file_path = self.get_file_path()
+
         with open(file_path, "r") as f:
             content = f.read()
 
@@ -70,6 +75,7 @@ class DailyNotesExtension(Extension):
 
     def insert_note(self, text):
         file_path = self.ensure_file_exists()
+        self.ensure_date_header()
 
         with open(file_path, "r") as f:
             content = f.read()
@@ -82,6 +88,12 @@ class DailyNotesExtension(Extension):
         # Insert at position 2 (0=header, 1=blank line, 2=insert here)
         for i, note_line in enumerate(note_lines):
             lines.insert(2 + i, note_line)
+
+        # Add blank line after notes if next line is a header
+        if len(lines) > 2 + len(note_lines):
+            next_line = lines[2 + len(note_lines)]
+            if next_line.startswith("##"):
+                lines.insert(2 + len(note_lines), "")
 
         with open(file_path, "w") as f:
             f.write("\n".join(lines))
@@ -135,7 +147,9 @@ class ItemEnterEventListener(EventListener):
         if action == "open":
             file_path = extension.ensure_file_exists()
             editor = extension.preferences.get("editor", "xdg-open")
-            return RunScriptAction(f'{editor} "{file_path}"', None)
+            # Use shell command to properly launch the editor
+            script = f'bash -c \'{editor} "{file_path}" &\''
+            return RunScriptAction(script, None)
 
         elif action == "insert":
             text = data.get("text", "")
