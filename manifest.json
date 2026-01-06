@@ -4,6 +4,7 @@
   "description": "Quick access to daily markdown journal - open or insert notes",
   "developer_name": "Jan",
   "icon": "images/icon.png",
+  "project_url": "https://github.com/janharkema/ulauncher-daily-notes",
   "options": {
     "query_debounce": 0.1
   },

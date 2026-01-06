@@ -1,6 +1,6 @@
 # Daily Notes - Ulauncher Extension
 
-A Ulauncher 5 (API v2) extension for managing a daily markdown journal.
+A Ulauncher 5 extension for managing a daily markdown journal.
 
 ## Features
 
@@ -10,33 +10,11 @@ A Ulauncher 5 (API v2) extension for managing a daily markdown journal.
 - **Auto Date Headers**: Automatically adds markdown headers for each day
 - **Configurable**: Choose your notes directory, date format, and preferred editor
 
-## Installation
-
-### Method 1: Manual Installation
-
-1. Clone or download this repository
-2. Copy the `ulauncher-daily-notes` folder to:
-   ```
-   ~/.local/share/ulauncher/extensions/
-   ```
-3. Restart Ulauncher or run:
-   ```
-   ulauncher --no-window-shadow
-   ```
-4. Open Ulauncher Preferences > Extensions and you should see "Daily Notes"
-
-### Method 2: Using Git
-
-```bash
-cd ~/.local/share/ulauncher/extensions/
-git clone <your-repo-url> com.github.yourusername.ulauncher-daily-notes
-```
-
 ## Usage
 
 ### Open Daily Notes
 
-1. Open Ulauncher (default: `Ctrl+Space`)
+1. Open Ulauncher
 2. Type `dn` (or your configured keyword)
 3. Select "Open Daily Notes" and press Enter
 
@@ -110,11 +88,3 @@ Make sure your configured editor command is installed and in your PATH. Try usin
 
 ### Icon not showing
 The icon will default to the SVG if PNG conversion fails. This doesn't affect functionality.
-
-## Credits
-
-Based on the VSCode Daily Journal Markdown extension.
-
-## License
-
-MIT
