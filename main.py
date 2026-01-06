@@ -109,12 +109,17 @@ class KeywordQueryEventListener(EventListener):
 
         if not query:
             # Show default options
+            file_path = extension.get_file_path()
+
+            # Ensure file exists before showing the option
+            extension.ensure_file_exists()
+
             items.append(
                 ExtensionResultItem(
                     icon="images/icon.png",
                     name="Open Daily Notes",
                     description="Open today's daily notes file",
-                    on_enter=ExtensionCustomAction({"action": "open"}),
+                    on_enter=OpenAction(file_path),
                 )
             )
             items.append(

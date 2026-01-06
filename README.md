@@ -34,11 +34,10 @@ Access preferences in Ulauncher Preferences > Extensions > Daily Notes:
 - **Notes Directory**: Where to store your daily notes (default: `~/daily-notes`)
 - **Date Format**: Python strftime format for date headers (default: `%A, %d %b`)
   - Examples:
+    - `%A, %b %-d` → "Monday, Jan 6"
     - `%A, %d %b` → "Monday, 06 Jan"
     - `%Y-%m-%d` → "2026-01-06"
     - `%B %d, %Y` → "January 06, 2026"
-- **Text Editor**: Command to open notes (default: `xdg-open`)
-  - Examples: `gedit`, `code`, `kate`, `vim`, `subl`
 
 ## File Organization
 
@@ -82,9 +81,6 @@ The extension:
 
 ### Notes directory doesn't exist
 The extension will automatically create the directory when you first use it.
-
-### Editor doesn't open
-Make sure your configured editor command is installed and in your PATH. Try using `xdg-open` for the system default application.
 
 ### Icon not showing
 The icon will default to the SVG if PNG conversion fails. This doesn't affect functionality.

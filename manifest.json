@@ -6,7 +6,7 @@
   "icon": "images/icon.png",
   "project_url": "https://github.com/janharkema/ulauncher-daily-notes",
   "options": {
-    "query_debounce": 0.1
+    "query_debounce": 0.01
   },
   "preferences": [
     {
@@ -29,13 +29,6 @@
       "name": "Date Format",
       "description": "Date header format (default: weekday, day month)",
       "default_value": "%A, %d %b"
-    },
-    {
-      "id": "editor",
-      "type": "input",
-      "name": "Text Editor",
-      "description": "Command to open the notes file (e.g., gedit, code, xdg-open)",
-      "default_value": "xdg-open"
     }
   ]
 }
