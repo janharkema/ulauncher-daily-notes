@@ -7,8 +7,8 @@ from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
 from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
+from ulauncher.api.shared.action.OpenAction import OpenAction
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
-from ulauncher.api.shared.action.RunScriptAction import RunScriptAction
 from ulauncher.api.shared.event import ItemEnterEvent, KeywordQueryEvent
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 
@@ -146,10 +146,9 @@ class ItemEnterEventListener(EventListener):
 
         if action == "open":
             file_path = extension.ensure_file_exists()
-            editor = extension.preferences.get("editor", "xdg-open")
-            # Use shell command to properly launch the editor
-            script = f'bash -c \'{editor} "{file_path}" &\''
-            return RunScriptAction(script, None)
+            logger.info(f"Opening file: {file_path}")
+            # Use OpenAction to open the file with the system's default handler
+            return OpenAction(file_path)
 
         elif action == "insert":
             text = data.get("text", "")
