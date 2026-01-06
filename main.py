@@ -1,28 +1,28 @@
-import os
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
-from ulauncher.api.client.Extension import Extension
+
 from ulauncher.api.client.EventListener import EventListener
-from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent
-from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
+from ulauncher.api.client.Extension import Extension
+from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
+from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
 from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from ulauncher.api.shared.action.RunScriptAction import RunScriptAction
-from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
-from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
+from ulauncher.api.shared.event import ItemEnterEvent, KeywordQueryEvent
+from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
 
 logger = logging.getLogger(__name__)
 
 
 class DailyNotesExtension(Extension):
-
     def __init__(self):
         super(DailyNotesExtension, self).__init__()
         self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
         self.subscribe(ItemEnterEvent, ItemEnterEventListener())
 
     def get_notes_directory(self):
-        notes_dir = self.preferences['notes_directory']
+        notes_dir = self.preferences["notes_directory"]
         return os.path.expanduser(notes_dir)
 
     def get_file_path(self):
@@ -38,8 +38,8 @@ class DailyNotesExtension(Extension):
 
     def get_date_header(self):
         today = datetime.now()
-        date_format = self.preferences.get('date_format', '%A, %d %b')
-        return f"## {today.strftime(date_format)}\n\n\n"
+        date_format = self.preferences.get("date_format", "%A, %d %b")
+        return f"## {today.strftime(date_format)}"
 
     def ensure_file_exists(self):
         file_path = self.get_file_path()
@@ -50,87 +50,95 @@ class DailyNotesExtension(Extension):
 
         # Create file with date header if it doesn't exist
         if not os.path.exists(file_path):
-            with open(file_path, 'w') as f:
-                f.write(self.get_date_header())
+            with open(file_path, "w") as f:
+                f.write(self.get_date_header() + "\n\n")
             return file_path
 
         # Check if we need to prepend today's date header
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             content = f.read()
 
-        lines = content.split('\n')
-        first_line = lines[0].strip() if lines else ''
-        date_header = self.get_date_header().strip()
+        date_header = self.get_date_header()
 
-        if first_line != date_header.split('\n')[0]:
-            # Prepend date header
-            with open(file_path, 'w') as f:
-                f.write(date_header + '\n' + content)
+        # Check if today's header already exists anywhere in the file
+        if date_header not in content:
+            # Prepend date header with spacing
+            with open(file_path, "w") as f:
+                f.write(date_header + "\n\n" + content)
 
         return file_path
 
     def insert_note(self, text):
         file_path = self.ensure_file_exists()
 
-        with open(file_path, 'r') as f:
-            lines = f.readlines()
+        with open(file_path, "r") as f:
+            content = f.read()
 
-        # Insert note at line 2 (after the header)
-        note_lines = [f"- {line}\n" for line in text.split('\n')]
-        lines[2:2] = note_lines
+        lines = content.split("\n")
 
-        with open(file_path, 'w') as f:
-            f.writelines(lines)
+        # Map each line of input to a bullet point
+        note_lines = [f"- {line}" for line in text.split("\n")]
+
+        # Insert at position 2 (0=header, 1=blank line, 2=insert here)
+        for i, note_line in enumerate(note_lines):
+            lines.insert(2 + i, note_line)
+
+        with open(file_path, "w") as f:
+            f.write("\n".join(lines))
 
         return file_path
 
 
 class KeywordQueryEventListener(EventListener):
-
     def on_event(self, event, extension):
-        query = event.get_argument() or ''
+        query = event.get_argument() or ""
 
         items = []
 
         if not query:
             # Show default options
-            items.append(ExtensionResultItem(
-                icon='images/icon.png',
-                name='Open Daily Notes',
-                description='Open today\'s daily notes file',
-                on_enter=ExtensionCustomAction({'action': 'open'})
-            ))
-            items.append(ExtensionResultItem(
-                icon='images/icon.png',
-                name='Insert Note',
-                description='Type your note to insert...',
-                on_enter=HideWindowAction()
-            ))
+            items.append(
+                ExtensionResultItem(
+                    icon="images/icon.png",
+                    name="Open Daily Notes",
+                    description="Open today's daily notes file",
+                    on_enter=ExtensionCustomAction({"action": "open"}),
+                )
+            )
+            items.append(
+                ExtensionResultItem(
+                    icon="images/icon.png",
+                    name="Insert Note",
+                    description="Type your note to insert...",
+                    on_enter=HideWindowAction(),
+                )
+            )
         else:
             # User is typing a note to insert
-            items.append(ExtensionResultItem(
-                icon='images/icon.png',
-                name=f'Insert: {query}',
-                description='Press Enter to add this note to your daily journal',
-                on_enter=ExtensionCustomAction({'action': 'insert', 'text': query})
-            ))
+            items.append(
+                ExtensionResultItem(
+                    icon="images/icon.png",
+                    name=f"Insert: {query}",
+                    description="Press Enter to add this note to your daily journal",
+                    on_enter=ExtensionCustomAction({"action": "insert", "text": query}),
+                )
+            )
 
         return RenderResultListAction(items)
 
 
 class ItemEnterEventListener(EventListener):
-
     def on_event(self, event, extension):
         data = event.get_data()
-        action = data.get('action')
+        action = data.get("action")
 
-        if action == 'open':
+        if action == "open":
             file_path = extension.ensure_file_exists()
-            editor = extension.preferences.get('editor', 'xdg-open')
-            return RunScriptAction(f'{editor} "{file_path}"', [])
+            editor = extension.preferences.get("editor", "xdg-open")
+            return RunScriptAction(f'{editor} "{file_path}"', None)
 
-        elif action == 'insert':
-            text = data.get('text', '')
+        elif action == "insert":
+            text = data.get("text", "")
             if text:
                 extension.insert_note(text)
             return HideWindowAction()
@@ -138,5 +146,5 @@ class ItemEnterEventListener(EventListener):
         return HideWindowAction()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     DailyNotesExtension().run()
