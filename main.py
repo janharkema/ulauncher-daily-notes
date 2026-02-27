@@ -1,3 +1,4 @@
+import locale
 import logging
 import os
 from datetime import datetime
@@ -39,6 +40,16 @@ class DailyNotesExtension(Extension):
     def get_date_header(self):
         today = datetime.now()
         date_format = self.preferences.get("date_format", "%A, %d %b")
+        locale_override = self.preferences.get("locale_override", "en_US.UTF-8").strip()
+        if locale_override:
+            saved = locale.setlocale(locale.LC_TIME)
+            try:
+                locale.setlocale(locale.LC_TIME, locale_override)
+                return f"## {today.strftime(date_format)}"
+            except locale.Error:
+                logger.warning(f"Locale '{locale_override}' not available, falling back to OS locale")
+            finally:
+                locale.setlocale(locale.LC_TIME, saved)
         return f"## {today.strftime(date_format)}"
 
     def ensure_file_exists(self):

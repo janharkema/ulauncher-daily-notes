@@ -29,6 +29,13 @@
       "name": "Date Format",
       "description": "Date header format (default: weekday, day month)",
       "default_value": "%A, %d %b"
+    },
+    {
+      "id": "locale_override",
+      "type": "input",
+      "name": "Locale Override",
+      "description": "Locale for day/month names in date headers (e.g. en_US.UTF-8, nl_NL.UTF-8). Leave empty to use OS locale.",
+      "default_value": "en_US.UTF-8"
     }
   ]
 }
