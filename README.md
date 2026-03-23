@@ -1,56 +1,62 @@
 # Daily Notes - Ulauncher Extension
 
-A Ulauncher 5 extension for managing a daily markdown journal.
+A Ulauncher 5 extension for managing a daily markdown journal in Joplin.
 
 ## Features
 
-- **Quick Open**: Open the current week's daily notes file
-- **Quick Insert**: Insert notes without opening the file
-- **Automatic Organization**: Creates weekly markdown files organized by year and week number
+- **Quick Open**: Open the current week's note directly in Joplin
+- **Quick Insert**: Insert notes without opening Joplin
+- **Automatic Organization**: Creates weekly notes organized by year and ISO week number
 - **Auto Date Headers**: Automatically adds markdown headers for each day
-- **Configurable**: Choose your notes directory, date format, and preferred editor
+
+## Requirements
+
+- Ulauncher 5+ (API v2)
+- Python 3.7+
+- Joplin desktop app with the Web Clipper server enabled
+
+## Setup
+
+1. In Joplin, go to **Tools → Options → Web Clipper** and enable the clipper service. Copy the API token.
+2. Find the ID of the notebook you want notes written to: right-click the notebook → **Copy external link**, and extract the ID from that link.
+3. In Ulauncher Preferences → Extensions → Daily Notes, fill in the token and notebook ID.
 
 ## Usage
 
-### Open Daily Notes
+### Open this week's note
 
 1. Open Ulauncher
 2. Type `dn` (or your configured keyword)
-3. Select "Open Daily Notes" and press Enter
+3. Select **Open Daily Notes** — the note opens in Joplin
 
-### Insert a Quick Note
+### Insert a quick note
 
 1. Open Ulauncher
 2. Type `dn <your note text>`
-   - Example: `dn Remember to call the dentist`
-3. Press Enter to insert the note
+   - Example: `dn Worked on issue ABC-123`
+3. Press Enter
 
 The note will be added as a bullet point under today's date header.
 
 ## Configuration
 
-Access preferences in Ulauncher Preferences > Extensions > Daily Notes:
+Preferences in Ulauncher Preferences → Extensions → Daily Notes:
 
-- **Notes Directory**: Where to store your daily notes (default: `~/daily-notes`)
-- **Date Format**: Python strftime format for date headers (default: `%A, %d %b`)
-  - Examples:
-    - `%A, %b %-d` → "Monday, Jan 6"
-    - `%A, %d %b` → "Monday, 06 Jan"
-    - `%Y-%m-%d` → "2026-01-06"
-    - `%B %d, %Y` → "January 06, 2026"
+| Setting | Default | Description |
+|---|---|---|
+| **Joplin API Token** | _(required)_ | Token from Joplin → Tools → Options → Web Clipper |
+| **Joplin Folder ID** | _(required)_ | ID of the target Joplin notebook |
+| **Joplin API URL** | `http://localhost:41184` | Joplin local REST API base URL |
+| **Date Format** | `%A, %d %b` | Python strftime format for date headers |
 
-## File Organization
+Date format examples:
+- `%A, %b %-d` → "Monday, Jan 6"
+- `%A, %d %b` → "Monday, 06 Jan"
+- `%Y-%m-%d` → "2026-01-06"
 
-Notes are organized as weekly markdown files:
+## Note Structure
 
-```
-~/daily-notes/
-├── 2026.01-daily-notes.md
-├── 2026.02-daily-notes.md
-└── ...
-```
-
-Each file contains date headers for each day:
+Notes are organized as weekly Joplin notes titled `{year}.{week:02d}-daily-notes`, with each day prepended as a header:
 
 ```markdown
 ## Monday, 06 Jan
@@ -64,23 +70,10 @@ Each file contains date headers for each day:
 - Previous day's notes
 ```
 
-## How It Works
-
-The extension:
-1. Creates a new weekly file if it doesn't exist
-2. Automatically prepends today's date header if not present
-3. Inserts notes as bullet points after the date header
-4. Uses the ISO week number for file naming
-
-## Requirements
-
-- Ulauncher 5+ (API v2)
-- Python 3.7+
-
 ## Troubleshooting
 
-### Notes directory doesn't exist
-The extension will automatically create the directory when you first use it.
+### "Joplin not reachable"
+Make sure Joplin is running and the Web Clipper server is enabled (Tools → Options → Web Clipper).
 
-### Icon not showing
-The icon will default to the SVG if PNG conversion fails. This doesn't affect functionality.
+### Notes going to the wrong notebook
+Double-check the **Joplin Folder ID** preference — right-click the notebook in Joplin and choose **Copy notebook ID**.
