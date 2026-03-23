@@ -17,11 +17,25 @@
       "default_value": "dn"
     },
     {
-      "id": "notes_directory",
+      "id": "joplin_token",
       "type": "input",
-      "name": "Notes Directory",
-      "description": "Directory to store daily notes (default: ~/daily-notes)",
-      "default_value": "~/daily-notes"
+      "name": "Joplin API Token",
+      "description": "Token from Joplin → Tools → Options → Web Clipper",
+      "default_value": ""
+    },
+    {
+      "id": "joplin_folder_id",
+      "type": "input",
+      "name": "Joplin Folder ID",
+      "description": "ID of the Joplin notebook to write notes into",
+      "default_value": ""
+    },
+    {
+      "id": "joplin_api_url",
+      "type": "input",
+      "name": "Joplin API URL",
+      "description": "Joplin local REST API base URL",
+      "default_value": "http://localhost:41184"
     },
     {
       "id": "date_format",

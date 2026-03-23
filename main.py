@@ -1,8 +1,9 @@
+import json
 import locale
 import logging
-import os
+import urllib.error
+import urllib.request
 from datetime import datetime
-from pathlib import Path
 
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.client.Extension import Extension
@@ -22,20 +23,15 @@ class DailyNotesExtension(Extension):
         self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
         self.subscribe(ItemEnterEvent, ItemEnterEventListener())
 
-    def get_notes_directory(self):
-        notes_dir = self.preferences["notes_directory"]
-        return os.path.expanduser(notes_dir)
+    def get_joplin_url(self):
+        return self.preferences.get("joplin_api_url", "http://localhost:41184").rstrip(
+            "/"
+        )
 
-    def get_file_path(self):
+    def get_note_title(self):
         today = datetime.now()
-        year = today.year
-        week_number = self.get_week_number(today)
-        notes_dir = self.get_notes_directory()
-        filename = f"{year}.{week_number:02d}-daily-notes.md"
-        return os.path.join(notes_dir, filename)
-
-    def get_week_number(self, date):
-        return date.isocalendar()[1]
+        week_number = today.isocalendar()[1]
+        return f"{today.year}.{week_number:02d}-daily-notes"
 
     def get_date_header(self):
         today = datetime.now()
@@ -47,92 +43,107 @@ class DailyNotesExtension(Extension):
                 locale.setlocale(locale.LC_TIME, locale_override)
                 return f"## {today.strftime(date_format)}"
             except locale.Error:
-                logger.warning(f"Locale '{locale_override}' not available, falling back to OS locale")
+                logger.warning(
+                    f"Locale '{locale_override}' not available, falling back to OS locale"
+                )
             finally:
                 locale.setlocale(locale.LC_TIME, saved)
         return f"## {today.strftime(date_format)}"
 
-    def ensure_file_exists(self):
-        """Ensure the weekly file and directory exist, create if needed."""
-        file_path = self.get_file_path()
-        notes_dir = self.get_notes_directory()
+    def _joplin_request(self, method, path, data=None):
+        token = self.preferences["joplin_token"]
+        base_url = self.get_joplin_url()
+        sep = "&" if "?" in path else "?"
+        url = f"{base_url}{path}{sep}token={token}"
+        body = json.dumps(data).encode() if data is not None else None
+        headers = {"Content-Type": "application/json"} if body else {}
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
 
-        # Create directory if it doesn't exist
-        Path(notes_dir).mkdir(parents=True, exist_ok=True)
+    def get_or_create_note(self):
+        """Return (note_id, body) for this week's note, creating it if needed."""
+        title = self.get_note_title()
+        folder_id = self.preferences["joplin_folder_id"]
 
-        # Create file with date header if it doesn't exist
-        if not os.path.exists(file_path):
-            with open(file_path, "w") as f:
-                f.write(self.get_date_header() + "\n\n")
+        # Fetch notes in folder (handles up to 100 notes; plenty for a weekly journal)
+        result = self._joplin_request(
+            "GET", f"/notes?parent_id={folder_id}&fields=id,title&limit=100"
+        )
+        for note in result.get("items", []):
+            if note["title"] == title:
+                note_data = self._joplin_request(
+                    "GET", f"/notes/{note['id']}?fields=id,body"
+                )
+                return note_data["id"], note_data["body"]
 
-        return file_path
+        # Create new note
+        initial_body = self.get_date_header() + "\n\n"
+        new_note = self._joplin_request(
+            "POST",
+            "/notes",
+            {
+                "title": title,
+                "body": initial_body,
+                "parent_id": folder_id,
+            },
+        )
+        return new_note["id"], initial_body
 
-    def ensure_date_header(self):
-        """Prepend today's date header if it doesn't exist."""
-        file_path = self.get_file_path()
-
-        with open(file_path, "r") as f:
-            content = f.read()
-
+    def ensure_date_header(self, body):
+        """Return body with today's date header prepended if absent."""
         date_header = self.get_date_header()
-
-        # Check if today's header already exists anywhere in the file
-        if date_header not in content:
-            # Prepend date header with spacing
-            with open(file_path, "w") as f:
-                f.write(date_header + "\n\n" + content)
-
-        return file_path
+        if date_header not in body:
+            return date_header + "\n\n" + body
+        return body
 
     def insert_note(self, text):
-        file_path = self.ensure_file_exists()
-        self.ensure_date_header()
+        note_id, body = self.get_or_create_note()
+        body = self.ensure_date_header(body)
 
-        with open(file_path, "r") as f:
-            content = f.read()
-
-        lines = content.split("\n")
-
-        # Map each line of input to a bullet point
+        lines = body.split("\n")
         note_lines = [f"- {line}" for line in text.split("\n")]
 
-        # Insert at position 2 (0=header, 1=blank line, 2=insert here)
         for i, note_line in enumerate(note_lines):
             lines.insert(2 + i, note_line)
 
         # Add blank line after notes if next line is a header
-        if len(lines) > 2 + len(note_lines):
-            next_line = lines[2 + len(note_lines)]
-            if next_line.startswith("##"):
-                lines.insert(2 + len(note_lines), "")
+        if len(lines) > 2 + len(note_lines) and lines[2 + len(note_lines)].startswith(
+            "##"
+        ):
+            lines.insert(2 + len(note_lines), "")
 
-        with open(file_path, "w") as f:
-            f.write("\n".join(lines))
-
-        return file_path
+        self._joplin_request("PUT", f"/notes/{note_id}", {"body": "\n".join(lines)})
+        return note_id
 
 
 class KeywordQueryEventListener(EventListener):
     def on_event(self, event, extension):
         query = event.get_argument() or ""
-
         items = []
 
         if not query:
-            # Show default options
-            file_path = extension.get_file_path()
-
-            # Ensure file exists before showing the option
-            extension.ensure_file_exists()
-
-            items.append(
-                ExtensionResultItem(
-                    icon="images/icon.png",
-                    name="Open Daily Notes",
-                    description="Open today's daily notes file",
-                    on_enter=OpenAction(file_path),
+            try:
+                note_id, _ = extension.get_or_create_note()
+                joplin_url = f"joplin://x-callback-url/openNote?id={note_id}"
+                items.append(
+                    ExtensionResultItem(
+                        icon="images/icon.png",
+                        name="Open Daily Notes",
+                        description="Open this week's note in Joplin",
+                        on_enter=OpenAction(joplin_url),
+                    )
                 )
-            )
+            except (urllib.error.URLError, KeyError) as e:
+                logger.error(f"Joplin API error: {e}")
+                items.append(
+                    ExtensionResultItem(
+                        icon="images/icon.png",
+                        name="Joplin not reachable",
+                        description="Check that Joplin is running and the token/folder are configured",
+                        on_enter=HideWindowAction(),
+                    )
+                )
             items.append(
                 ExtensionResultItem(
                     icon="images/icon.png",
@@ -142,7 +153,6 @@ class KeywordQueryEventListener(EventListener):
                 )
             )
         else:
-            # User is typing a note to insert
             items.append(
                 ExtensionResultItem(
                     icon="images/icon.png",
@@ -160,17 +170,13 @@ class ItemEnterEventListener(EventListener):
         data = event.get_data()
         action = data.get("action")
 
-        if action == "open":
-            file_path = extension.ensure_file_exists()
-            logger.info(f"Opening file: {file_path}")
-            # Use OpenAction to open the file with the system's default handler
-            return OpenAction(file_path)
-
-        elif action == "insert":
+        if action == "insert":
             text = data.get("text", "")
             if text:
-                extension.insert_note(text)
-            return HideWindowAction()
+                try:
+                    extension.insert_note(text)
+                except (urllib.error.URLError, KeyError) as e:
+                    logger.error(f"Failed to insert note: {e}")
 
         return HideWindowAction()
 
