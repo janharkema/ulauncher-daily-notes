@@ -21,7 +21,7 @@ There are no lint, test, or build commands — changes take effect after Ulaunch
 
 ## Architecture
 
-All logic lives in [main.py](main.py) (~170 lines). The extension follows Ulauncher's event-listener pattern:
+All logic lives in [main.py](main.py). The extension follows Ulauncher's event-listener pattern:
 
 - **`DailyNotesExtension`** — main class, subscribes to events, holds all file/date logic
 - **`KeywordQueryEventListener`** — handles the search bar input; shows "Open" / "Insert" options when no query, or an insert-preview item when the user types text
@@ -50,3 +50,4 @@ Configured in `manifest.json` and read via `self.preferences[...]` in the extens
 | `joplin_folder_id` | _(required)_ | ID of the target Joplin notebook |
 | `joplin_api_url` | `http://localhost:41184` | Joplin local REST API base URL |
 | `date_format` | `%A, %d %b` | Python strftime format for `## Date` headers |
+| `locale_override` | `en_US.UTF-8` | Locale for day/month names (e.g. `nl_NL.UTF-8`); empty = OS locale |

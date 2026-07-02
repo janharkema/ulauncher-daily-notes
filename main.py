@@ -2,6 +2,7 @@ import json
 import locale
 import logging
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime
 
@@ -66,16 +67,21 @@ class DailyNotesExtension(Extension):
         title = self.get_note_title()
         folder_id = self.preferences["joplin_folder_id"]
 
-        # Fetch notes in folder (handles up to 100 notes; plenty for a weekly journal)
-        result = self._joplin_request(
-            "GET", f"/notes?parent_id={folder_id}&fields=id,title&limit=100"
-        )
-        for note in result.get("items", []):
-            if note["title"] == title:
-                note_data = self._joplin_request(
-                    "GET", f"/notes/{note['id']}?fields=id,body"
-                )
-                return note_data["id"], note_data["body"]
+        page = 1
+        while True:
+            result = self._joplin_request(
+                "GET",
+                f"/folders/{urllib.parse.quote(folder_id)}/notes?fields=id,title&limit=100&page={page}",
+            )
+            for note in result.get("items", []):
+                if note["title"] == title:
+                    note_data = self._joplin_request(
+                        "GET", f"/notes/{note['id']}?fields=id,body"
+                    )
+                    return note_data["id"], note_data["body"]
+            if not result.get("has_more", False):
+                break
+            page += 1
 
         # Create new note
         initial_body = self.get_date_header() + "\n\n"
@@ -123,27 +129,14 @@ class KeywordQueryEventListener(EventListener):
         items = []
 
         if not query:
-            try:
-                note_id, _ = extension.get_or_create_note()
-                joplin_url = f"joplin://x-callback-url/openNote?id={note_id}"
-                items.append(
-                    ExtensionResultItem(
-                        icon="images/icon.png",
-                        name="Open Daily Notes",
-                        description="Open this week's note in Joplin",
-                        on_enter=OpenAction(joplin_url),
-                    )
+            items.append(
+                ExtensionResultItem(
+                    icon="images/icon.png",
+                    name="Open Daily Notes",
+                    description="Open this week's note in Joplin",
+                    on_enter=ExtensionCustomAction({"action": "open"}),
                 )
-            except (urllib.error.URLError, KeyError) as e:
-                logger.error(f"Joplin API error: {e}")
-                items.append(
-                    ExtensionResultItem(
-                        icon="images/icon.png",
-                        name="Joplin not reachable",
-                        description="Check that Joplin is running and the token/folder are configured",
-                        on_enter=HideWindowAction(),
-                    )
-                )
+            )
             items.append(
                 ExtensionResultItem(
                     icon="images/icon.png",
@@ -170,7 +163,13 @@ class ItemEnterEventListener(EventListener):
         data = event.get_data()
         action = data.get("action")
 
-        if action == "insert":
+        if action == "open":
+            try:
+                note_id, _ = extension.get_or_create_note()
+                return OpenAction(f"joplin://x-callback-url/openNote?id={note_id}")
+            except (urllib.error.URLError, KeyError) as e:
+                logger.error(f"Joplin API error: {e}")
+        elif action == "insert":
             text = data.get("text", "")
             if text:
                 try:
