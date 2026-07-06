@@ -56,13 +56,13 @@ class DailyNotesExtension(Extension):
         base_url = self.get_joplin_url()
         sep = "&" if "?" in path else "?"
         url = f"{base_url}{path}{sep}token={token}"
-        logger.info("[daily-notes] %s %s%s", method, base_url, path)
+        logger.warning("[daily-notes] %s %s%s", method, base_url, path)
         body = json.dumps(data).encode() if data is not None else None
         headers = {"Content-Type": "application/json"} if body else {}
         req = urllib.request.Request(url, data=body, headers=headers, method=method)
         with urllib.request.urlopen(req, timeout=5) as resp:
             result = json.loads(resp.read())
-            logger.info("[daily-notes] response keys: %s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
+            logger.warning("[daily-notes] response keys: %s", list(result.keys()) if isinstance(result, dict) else type(result).__name__)
             return result
 
     def get_or_create_note(self):
@@ -77,11 +77,11 @@ class DailyNotesExtension(Extension):
                 f"/folders/{urllib.parse.quote(folder_id)}/notes?fields=id,title&limit=100&page={page}",
             )
             items = result.get("items", [])
-            logger.info("[daily-notes] page %d: got %d notes, has_more=%s", page, len(items), result.get("has_more"))
+            logger.warning("[daily-notes] page %d: got %d notes, has_more=%s", page, len(items), result.get("has_more"))
             for note in items:
-                logger.info("[daily-notes] found note: %r", note.get("title"))
+                logger.warning("[daily-notes] found note: %r", note.get("title"))
                 if note["title"] == title:
-                    logger.info("[daily-notes] matched existing note id=%s", note["id"])
+                    logger.warning("[daily-notes] matched existing note id=%s", note["id"])
                     note_data = self._joplin_request(
                         "GET", f"/notes/{note['id']}?fields=id,body"
                     )
@@ -90,7 +90,7 @@ class DailyNotesExtension(Extension):
                 break
             page += 1
 
-        logger.info("[daily-notes] no match found for %r, creating new note", title)
+        logger.warning("[daily-notes] no match found for %r, creating new note", title)
         # Create new note
         initial_body = self.get_date_header() + "\n\n"
         new_note = self._joplin_request(
@@ -175,7 +175,7 @@ class ItemEnterEventListener(EventListener):
             try:
                 note_id, _ = extension.get_or_create_note()
                 url = f"joplin://x-callback-url/openNote?id={note_id}"
-                logger.info("[daily-notes] opening %s", url)
+                logger.warning("[daily-notes] opening %s", url)
                 return OpenAction(url)
             except (urllib.error.URLError, KeyError) as e:
                 logger.error("[daily-notes] Joplin API error on open: %s", e)
