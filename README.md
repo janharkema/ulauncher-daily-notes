@@ -6,6 +6,7 @@ A Ulauncher 5 extension for managing a daily markdown journal in Joplin.
 
 - **Quick Open**: Open the current week's note directly in Joplin
 - **Quick Insert**: Insert notes without opening Joplin
+- **Quick TODO**: Add checkbox items to a running TODO note without opening Joplin
 - **Automatic Organization**: Creates weekly notes organized by year and ISO week number
 - **Auto Date Headers**: Automatically adds markdown headers for each day
 
@@ -38,6 +39,15 @@ A Ulauncher 5 extension for managing a daily markdown journal in Joplin.
 
 The note will be added as a bullet point under today's date header.
 
+### Add a TODO
+
+1. Open Ulauncher
+2. Type `dn todo <your todo text>`
+   - Example: `dn todo Review PR #42`
+3. Press Enter
+
+The item is appended to a note titled `TODO` in the same notebook. It is prefixed with `- [ ]`, so that Joplin renders it as a checkbox.
+
 ## Configuration
 
 Preferences in Ulauncher Preferences → Extensions → Daily Notes:
@@ -68,6 +78,13 @@ Notes are organized as weekly Joplin notes titled `{year}.{week:02d}-daily-notes
 ## Sunday, 05 Jan
 
 - Previous day's notes
+```
+
+The TODO note is a single flat note titled `TODO` in the same notebook, with new items appended to the end:
+
+```markdown
+- [ ] Existing item
+- [ ] New item
 ```
 
 ## Troubleshooting
