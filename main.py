@@ -62,9 +62,8 @@ class DailyNotesExtension(Extension):
         with urllib.request.urlopen(req, timeout=5) as resp:
             return json.loads(resp.read())
 
-    def get_or_create_note(self):
-        """Return (note_id, body) for this week's note, creating it if needed."""
-        title = self.get_note_title()
+    def _find_or_create_note(self, title, initial_body=""):
+        """Return (note_id, body) for the note with this title in the configured folder."""
         folder_id = self.preferences["joplin_folder_id"]
 
         page = 1
@@ -83,8 +82,6 @@ class DailyNotesExtension(Extension):
                 break
             page += 1
 
-        # Create new note
-        initial_body = self.get_date_header() + "\n\n"
         new_note = self._joplin_request(
             "POST",
             "/notes",
@@ -95,6 +92,10 @@ class DailyNotesExtension(Extension):
             },
         )
         return new_note["id"], initial_body
+
+    def get_or_create_note(self):
+        """Return (note_id, body) for this week's note, creating it if needed."""
+        return self._find_or_create_note(self.get_note_title(), self.get_date_header() + "\n\n")
 
     def ensure_date_header(self, body):
         """Return body with today's date header prepended if absent."""
@@ -122,6 +123,13 @@ class DailyNotesExtension(Extension):
         self._joplin_request("PUT", f"/notes/{note_id}", {"body": "\n".join(lines)})
         return note_id
 
+    def add_todo(self, text):
+        note_id, body = self._find_or_create_note("TODO")
+        new_body = body.rstrip("\n")
+        new_body = f"{new_body}\n- [ ] {text}\n" if new_body else f"- [ ] {text}\n"
+        self._joplin_request("PUT", f"/notes/{note_id}", {"body": new_body})
+        return note_id
+
 
 class KeywordQueryEventListener(EventListener):
     def on_event(self, event, extension):
@@ -145,6 +153,25 @@ class KeywordQueryEventListener(EventListener):
                     on_enter=HideWindowAction(),
                 )
             )
+            items.append(
+                ExtensionResultItem(
+                    icon="images/icon.png",
+                    name="Add TODO",
+                    description="Type 'todo <text>' to add a checkbox item...",
+                    on_enter=HideWindowAction(),
+                )
+            )
+        elif query.split(" ", 1)[0].lower() == "todo":
+            text = query.split(" ", 1)[1].strip() if " " in query else ""
+            if text:
+                items.append(
+                    ExtensionResultItem(
+                        icon="images/icon.png",
+                        name=f"Add TODO: {text}",
+                        description="Press Enter to add this checkbox item to your TODO note",
+                        on_enter=ExtensionCustomAction({"action": "todo", "text": text}),
+                    )
+                )
         else:
             items.append(
                 ExtensionResultItem(
@@ -176,6 +203,13 @@ class ItemEnterEventListener(EventListener):
                     extension.insert_note(text)
                 except (urllib.error.URLError, KeyError) as e:
                     logger.error(f"Failed to insert note: {e}")
+        elif action == "todo":
+            text = data.get("text", "")
+            if text:
+                try:
+                    extension.add_todo(text)
+                except (urllib.error.URLError, KeyError) as e:
+                    logger.error(f"Failed to add todo: {e}")
 
         return HideWindowAction()
 
